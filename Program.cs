@@ -11,17 +11,29 @@ var app = WebApplication.Create(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 
 var myName = "https://cloud-run-hackathon-bob-buoqbhdolq-uc.a.run.app";
+var myScore = int.MinValue;
+bool runAway;
 
 app.MapGet("/", () => "Let the battle begin!");
-app.MapPost("/", (ArenaUpdate model) =>
+app.MapPost("/", (ArenaUpdate model, ILogger<Program> logger) =>
 {
-    Console.WriteLine(model);
     if (myName != model.Links.Self.Href)
     {
         myName = model.Links.Self.Href;
     }
 
-    return Play(model);
+    //runAway = myScore > model.Arena.State[myName].Score;
+    myScore = model.Arena.State[myName].Score;
+
+    Task.Run(() => logger.LogInformation("My name: {Href}, Dimension: [{D1}, {D2}], my score: {Score}",
+        model.Links.Self.Href,
+        model.Arena.Dims[0],
+        model.Arena.Dims[1],
+        myScore));
+
+    var result = Play(model);
+    Task.Run(() => logger.LogInformation("Command: {Command}", result));
+    return result;
 });
 
 app.Run($"http://0.0.0.0:{port}");
@@ -42,9 +54,9 @@ string Play(ArenaUpdate input)
     return action.ToString();
 }
 
-(string[,] board, Position myself) GetBoard(Dictionary<string, PlayerState> playerInfo, int x, int y)
+(string?[,] board, Position myself) GetBoard(Dictionary<string, PlayerState> playerInfo, int x, int y)
 {
-    string[,] board = new string[y, x];
+    var board = new string[y, x];
     Position myself = default;
     foreach (var pair in playerInfo)
     {
@@ -246,10 +258,10 @@ Action TakeAction(string attackerName, string targetName, Dictionary<string, Pla
 }
 
 // Use BFS to find the nearest enemy.
-static Position FindNearestEnemy(string[,] board, Position myself)
+static Position FindNearestEnemy(string?[,] board, Position myself)
 {
     int[,] dir = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } };
-    bool[,] visited = new bool[board.GetLength(0), board.GetLength(1)];
+    var visited = new bool[board.GetLength(0), board.GetLength(1)];
 
     Queue<Position> q = new();
     q.Enqueue(myself);
