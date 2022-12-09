@@ -10,7 +10,7 @@ var app = WebApplication.Create(args);
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 
-var myName = "https://cloud-run-hackathon-go-n5xjuxfciq-uc.a.run.app";
+var myName = "https://cloud-run-hackathon-bob-buoqbhdolq-uc.a.run.app";
 
 app.MapGet("/", () => "Let the battle begin!");
 app.MapPost("/", (ArenaUpdate model) =>
@@ -35,7 +35,7 @@ string Play(ArenaUpdate input)
     if (string.IsNullOrEmpty(targetName))
     {
         var enemyPos = FindNearestEnemy(board, myPos);
-        targetName = board[enemyPos.Y, enemyPos.X];
+        targetName = board[enemyPos.Y, enemyPos.X] ?? "";
     }
 
     var action = TakeAction(myName, targetName, input.Arena.State);
@@ -107,7 +107,10 @@ static bool IsInside(int x, int y, string?[,] board)
 Action TakeAction(string attackerName, string targetName, Dictionary<string, PlayerState> playerInfo)
 {
     var attacker = playerInfo[attackerName];
-    var target = playerInfo[targetName];
+    if (!playerInfo.TryGetValue(targetName, out var target))
+    {
+        return (Action)Random.Shared.Next(4);
+    }
 
     // Same column
     if (attacker.X == target.X)
